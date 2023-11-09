@@ -26,6 +26,7 @@ function connect(event) {
 
     var socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
+    stompClient.debug = null;
     stompClient.connect({}, onConnected, onError);
   }
   event.preventDefault();
@@ -34,19 +35,6 @@ function connect(event) {
 function onConnected() {
   // Subscribe to the Public Topic
   stompClient.subscribe('/topic/public', onMessageReceived);
-
-  console.log("가위 바위 보 시작합니다.")
-  const rsp = Math.random() % 3
-  now = new Date();
-
-  // Tell your username to the server
-  playRsp()
-  /*
-  stompClient.send("/app/chat.addUser",
-      {},
-      JSON.stringify({sender: username, type: 'RSP', content: rsp})
-  )
-   */
 
   connectingElement.classList.add('hidden');
 }
@@ -58,6 +46,19 @@ function playRsp() {
       {},
       JSON.stringify({sender: username, type: 'RSP', content: rsp})
   )
+}
+
+function startGameConfirm() {
+  // '네'라는 응답을 서버로 전송
+  if (stompClient) {
+    var startResponse = {
+      sender: username,
+      type: 'CONFIRMED',
+      content: '네'
+    };
+    stompClient.send("/app/chat.gameStartConfirm", {},
+        JSON.stringify(startResponse));
+  }
 }
 
 function onError(error) {
@@ -83,11 +84,24 @@ function onMessageReceived(payload) {
   var message = JSON.parse(payload.body);
 
   var messageElement = document.createElement('li');
-
-  if (message.type === 'JOIN') {
-    messageElement.classList.add('event-message');
+  if (message.type === 'START') {
+    console.log("START")
+    now = new Date()
+    playRsp()
+    // startGameConfirm()
+  } else if (message.type === 'CONFIRMED') {
+    // console.log("CONFIRMED")
+    // now = new Date()
+    // playRsp()
+  } else if (message.type === 'NOT_CONFIRMED') {
     console.log(message.content)
-  } else if (message.type === 'LEAVE') {
+  }
+      // else if (message.type === 'JOIN') {
+      //   messageElement.classList.add('event-message');
+      //   now = new Date()
+      //   playRsp()
+  // }
+  else if (message.type === 'LEAVE') {
     messageElement.classList.add('event-message');
     message.content = message.sender + ' left!';
   } else if (message.type === 'RSP') {
